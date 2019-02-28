@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+}
+
+compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
+
+group 'info.repy.webframework'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'org.projectlombok:lombok:1.18.+'
+    annotationProcessor 'org.projectlombok:lombok:1.18.+'
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+}
