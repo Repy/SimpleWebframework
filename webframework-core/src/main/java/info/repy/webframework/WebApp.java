@@ -8,15 +8,36 @@ import java.net.Socket;
 import java.util.List;
 
 public class WebApp implements Runnable {
+    private final Socket socket;
+    private final WebHandler[] handlers;
 
-    public WebApp(Socket so) {
+    public WebApp(Socket so, WebHandler[] handlers) {
+        this.handlers = handlers;
         this.socket = so;
     }
 
-    private Socket socket;
-
     public Response exec(Request req) {
-        return new Response();
+        Response res = null;
+        for (WebHandler h : handlers){
+            boolean ok = false;
+            try{
+                ok = h.handle(req);
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+            if(ok){
+                try{
+                    res = h.request(req);
+                }catch (Exception e){
+                    e.printStackTrace();
+                    break;
+                }
+            }
+        }
+        if(res == null){
+            res = ResponseFactory.notFound();
+        }
+        return res;
     }
 
     @Override
@@ -40,7 +61,9 @@ public class WebApp implements Runnable {
                     System.out.println(req.getContentLength());
                     System.out.println(new String(req.getBody(),"UTF-8"));
                     Response aa = exec(req);
-                    byte[] by = aa.getBytes();
+                    byte[] by = aa.getHeaderBytes();
+                    output.write(by, 0, by.length);
+                    by = aa.getBodyBytes();
                     output.write(by, 0, by.length);
                     output.flush();
                     System.out.println("レスポンス");

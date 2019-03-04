@@ -1,16 +1,92 @@
 package info.repy.webframework;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class Response {
+public class Response implements AutoCloseable{
 
-    public byte[] getBytes() {
-        return ("HTTP/1.1 200 OK\r\n" +
-                "Content-Type: text/html; charset=UTF-8\r\n" +
-                "Cache-Control: private, max-age=0\r\n" +
-                "Connection: keep-alive\r\n" +
-                "Content-Length: 69\r\n" +
-                "\r\n" +
-                "<form method='post'><input type='submit' name='aa' value='aa'></form>").getBytes(StandardCharsets.UTF_8);
+    private final int status;
+
+    public Response(int status) {
+        this.status = status;
+        this.outputStream = new ByteArrayOutputStream();
+        this.headers = new HashMap<>();
+    }
+
+    private final ByteArrayOutputStream outputStream;
+
+    public ByteArrayOutputStream getOutputStream() {
+        return outputStream;
+    }
+
+    private Map<String, List<String>> headers;
+
+    public String[] getHeader(String name) {
+        name = name.toLowerCase();
+        List<String> val = headers.get(name);
+        if (val == null) return null;
+        return val.toArray(new String[]{});
+    }
+
+    public void addHeader(String name, String value) {
+        name = name.toLowerCase();
+        List<String> val = headers.get(name);
+        if (val == null) {
+            val = new ArrayList<>(1);
+            headers.put(name, val);
+        }
+        val.add(value);
+    }
+
+    public void removeHeader(String name) {
+        name = name.toLowerCase();
+        if (headers.containsKey(name)) headers.remove(name);
+    }
+
+    public byte[] getHeaderBytes() throws IOException {
+        outputStream.close();
+        StringBuilder sb = new StringBuilder();
+        sb.append("HTTP/1.1 ");
+        switch (status) {
+            case 200:
+                sb.append("200 OK");
+                break;
+            case 2:
+                break;
+            default:
+                break;
+        }
+        sb.append("\r\n");
+        if (this.headers.containsKey("content-length")) {
+            this.removeHeader("content-length");
+        }
+        this.addHeader("content-length", Integer.toString(outputStream.size()));
+        for (String key : headers.keySet()) {
+            List<String> vals = headers.get(key);
+            for (String val : vals) {
+                sb.append(key);
+                sb.append(": ");
+                sb.append(val);
+                sb.append("\r\n");
+            }
+        }
+        sb.append("\r\n");
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] getBodyBytes() {
+        return outputStream.toByteArray();
+    }
+
+    @Override
+    public void close() throws Exception {
+        this.outputStream.close();
     }
 }
