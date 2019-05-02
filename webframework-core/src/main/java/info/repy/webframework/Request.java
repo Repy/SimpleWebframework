@@ -70,6 +70,7 @@ public class Request {
             return false;
         }
         contentLength = headerParseContentLength();
+        parseQueryString();
         return true;
     }
 
@@ -90,12 +91,47 @@ public class Request {
     private String path;
 
     @Getter
+    private Map<String, List<String>> queryString = new HashMap<>();
+
+    @Getter
     private String httpVersion;
 
     private Map<String, List<String>> headers = new HashMap<>();
 
     @Getter
     private int contentLength;
+
+    private void parseQueryString() {
+        String p = this.path;
+        int now = p.indexOf('?');
+        if(now == -1) return;
+        now++;
+        boolean end = true;
+        while (end) {
+            int next = p.indexOf('&', now);
+            int eq = p.indexOf('=', now);
+            if(next == -1) {
+                next = p.length();
+                end = false;
+            }
+            String key,value;
+            if(eq > next || eq == -1) {
+                key = p.substring(now, next);
+                value = "";
+            }else{
+                key = p.substring(now, eq);
+                value = p.substring(eq + 1, next);
+            }
+            if(queryString.containsKey(key)){
+                queryString.get(key).add(value);
+            }else{
+                ArrayList<String> ar = new ArrayList<>(1);
+                ar.add(value);
+                queryString.put(key, ar);
+            }
+            now = next + 1;
+        }
+    }
 
     private int headerParseContentLength() {
         List<String> val = headers.get("content-length");

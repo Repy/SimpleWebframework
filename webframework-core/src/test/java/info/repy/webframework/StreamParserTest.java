@@ -114,6 +114,43 @@ public class StreamParserTest {
         }
     }
 
+    @Test
+    public void testQuery() throws IOException {
+        StreamParser st = new StreamParser();
+        Request req;
+
+        req = streamString(st, "GET /path/ HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert req.getQueryString().size() == 0;
+
+        req = streamString(st, "GET /path/? HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert req.getQueryString().size() == 1;
+        assert req.getQueryString().containsKey("");
+
+        req = streamString(st, "GET /path/?aa=bb HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert Objects.equals(req.getQueryString().get("aa").get(0), "bb");
+
+        req = streamString(st, "GET /path/?aa=bb1&aa=bb2&aa=bb3 HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert Objects.equals(req.getQueryString().get("aa").get(0), "bb1");
+        assert Objects.equals(req.getQueryString().get("aa").get(1), "bb2");
+        assert Objects.equals(req.getQueryString().get("aa").get(2), "bb3");
+
+        req = streamString(st, "GET /path/?aa=bb1&aa=bb2&aa=bb3 HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert Objects.equals(req.getQueryString().get("aa").get(0), "bb1");
+        assert Objects.equals(req.getQueryString().get("aa").get(1), "bb2");
+        assert Objects.equals(req.getQueryString().get("aa").get(2), "bb3");
+
+        req = streamString(st, "GET /path/?aa=&aa&aa=bb3 HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert Objects.equals(req.getQueryString().get("aa").get(0), "");
+        assert Objects.equals(req.getQueryString().get("aa").get(1), "");
+        assert Objects.equals(req.getQueryString().get("aa").get(2), "bb3");
+
+        req = streamString(st, "GET /path/?aa=&&aa=?&aa=bb3 HTTP1.1\r\nAAA:111\r\n\r\n").get(0);
+        assert Objects.equals(req.getQueryString().get("aa").get(0), "");
+        assert Objects.equals(req.getQueryString().get("aa").get(1), "?");
+        assert Objects.equals(req.getQueryString().get("aa").get(2), "bb3");
+
+    }
+
     public List<Request> streamString(StreamParser st, String str) throws IOException {
         byte[] strby = str.getBytes(StandardCharsets.UTF_8);
         return st.input(strby, strby.length);
